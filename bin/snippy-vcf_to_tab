@@ -45,6 +45,7 @@ print STDERR "Loaded $nseq sequences.\n";
 
 my %feat;
 my %olap;
+my %locus_tags;
 my $nfeat=0;
 
 if ($gff) {
@@ -53,6 +54,9 @@ if ($gff) {
   while (my $f = $in->next_feature) {
     $f->attach_seq( $seq{ $f->seq_id } );
     $feat{++$nfeat} = $f;
+    if ($f->has_tag("locus_tag")) {
+      $locus_tags{($f->get_tag_values("locus_tag"))[0]} = $f;
+    }
     for my $pos ($f->start .. $f->end) {
       $olap{$f->seq_id}->[$pos] = $nfeat;  # FIXME: should be splice ?
     }
@@ -99,6 +103,17 @@ while (<VCF>) {
       my @eff = split m/\|/, $tag->{ANN};
       $anno{NT_POS} = $eff[11];
       $anno{AA_POS} = $eff[13];
+
+      # Annotate with matching feature as annotated by snpEff (fixes issue w/ overlapping features)
+      my $locus_tag = $eff[3];
+      my $f = $locus_tags{$locus_tag};
+      if ($f) {
+        $anno{FTYPE} = $f->primary_tag;
+        $anno{STRAND} = $f->strand < 0 ? '-' : $f->strand > 0 ? '+' : '.';
+        for my $t (@ANNO) {
+          $anno{$t} = ($f->get_tag_values(lc($t)))[0] if $f->has_tag(lc($t));
+        }
+      }
       # print STDERR Dumper($tag) if !defined $eff[1] or !defined $eff[10] or !defined $eff[1];
       $anno{EFFECT} = join(' ', map { defined($_) ? $_ : '' } @eff[1,9,10] );
     }
