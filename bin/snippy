@@ -397,6 +397,11 @@ my @cmd = (
   ( $nfeat > 0 ? "snpEff ann -noLog -noStats -no-downstream -no-upstream -no-utr"
                  ." -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
+
+  # Split ANN into multiple lines when it affects multiple locus
+  "cat $prefix.vcf | $BINDIR/snpEff-vcfEffOnePerLine > $prefix.oneEffPerLine.vcf",
+  "mv $prefix.oneEffPerLine.vcf $prefix.vcf",
+
   # prepare output files
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   # SNPS only
